@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: 'Analizuj swoje CV pod konkretne oferty pracy. Otrzymaj scoring, feedback i gotową dostosowaną wersję.',
 };
 
-const LAST_UPDATED = new Date('2026-03-22T22:00:00');
+const LAST_UPDATED = new Date('2026-03-22T21:21:00');
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const updated = LAST_UPDATED.toLocaleString('pl-PL', {
