@@ -1,6 +1,7 @@
 import mysql from 'mysql2/promise';
 
 let pool: mysql.Pool | null = null;
+let initialized = false;
 
 export function getPool(): mysql.Pool {
   if (!pool) {
@@ -15,6 +16,15 @@ export function getPool(): mysql.Pool {
     });
   }
   return pool;
+}
+
+export async function ensureDB(): Promise<mysql.Pool> {
+  const p = getPool();
+  if (!initialized) {
+    await initDB();
+    initialized = true;
+  }
+  return p;
 }
 
 export async function initDB() {

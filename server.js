@@ -12,17 +12,7 @@ const handle = app.getRequestHandler();
 
 const port = parseInt(process.env.PORT || '3000', 10);
 
-app.prepare().then(async () => {
-  // Initialize DB tables
-  try {
-    const { initDB } = await import('./lib/storage/db.js');
-    await initDB();
-    console.log('> Database initialized');
-  } catch (err) {
-    console.error('Database init failed:', err);
-    process.exit(1);
-  }
-
+app.prepare().then(() => {
   createServer((req, res) => {
     handle(req, res, parse(req.url, true));
   }).listen(port, '127.0.0.1', () => {

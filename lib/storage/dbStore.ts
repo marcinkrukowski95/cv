@@ -1,11 +1,11 @@
 import mysql from 'mysql2/promise';
 import { CVDocument, JobListing, AnalysisResult } from '@/types';
-import { getPool } from './db';
+import { ensureDB } from './db';
 
 // CV
 export const cvStore = {
   async save(cv: CVDocument) {
-    const pool = getPool();
+    const pool = await ensureDB();
     await pool.execute(
       `INSERT INTO cvs (id, created_at, source, file_name, file_path, canva_design_id, canva_design_name, canva_thumbnail_url, raw_text, sections)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -19,18 +19,18 @@ export const cvStore = {
     );
   },
   async get(id: string): Promise<CVDocument | null> {
-    const pool = getPool();
+    const pool = await ensureDB();
     const [rows] = await pool.execute<mysql.RowDataPacket[]>('SELECT * FROM cvs WHERE id = ?', [id]);
     if (!rows.length) return null;
     return rowToCV(rows[0]);
   },
   async list(): Promise<CVDocument[]> {
-    const pool = getPool();
+    const pool = await ensureDB();
     const [rows] = await pool.execute<mysql.RowDataPacket[]>('SELECT * FROM cvs ORDER BY created_at DESC');
     return (rows as mysql.RowDataPacket[]).map(rowToCV);
   },
   async delete(id: string) {
-    const pool = getPool();
+    const pool = await ensureDB();
     await pool.execute('DELETE FROM cvs WHERE id = ?', [id]);
   },
 };
@@ -53,7 +53,7 @@ function rowToCV(row: mysql.RowDataPacket): CVDocument {
 // Jobs
 export const jobStore = {
   async save(job: JobListing) {
-    const pool = getPool();
+    const pool = await ensureDB();
     await pool.execute(
       `INSERT INTO jobs (id, created_at, source, url, raw_text, parsed_data)
        VALUES (?, ?, ?, ?, ?, ?)
@@ -63,13 +63,13 @@ export const jobStore = {
     );
   },
   async get(id: string): Promise<JobListing | null> {
-    const pool = getPool();
+    const pool = await ensureDB();
     const [rows] = await pool.execute<mysql.RowDataPacket[]>('SELECT * FROM jobs WHERE id = ?', [id]);
     if (!rows.length) return null;
     return rowToJob(rows[0]);
   },
   async list(): Promise<JobListing[]> {
-    const pool = getPool();
+    const pool = await ensureDB();
     const [rows] = await pool.execute<mysql.RowDataPacket[]>('SELECT * FROM jobs ORDER BY created_at DESC');
     return (rows as mysql.RowDataPacket[]).map(rowToJob);
   },
@@ -89,7 +89,7 @@ function rowToJob(row: mysql.RowDataPacket): JobListing {
 // Analyses
 export const analysisStore = {
   async save(analysis: AnalysisResult) {
-    const pool = getPool();
+    const pool = await ensureDB();
     await pool.execute(
       `INSERT INTO analyses (id, created_at, cv_id, job_id, match_score, score_breakdown, matched_skills, missing_skills, partial_skills, feedback, tailored_cv, canva_output_design_id, canva_output_url)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -107,13 +107,13 @@ export const analysisStore = {
     );
   },
   async get(id: string): Promise<AnalysisResult | null> {
-    const pool = getPool();
+    const pool = await ensureDB();
     const [rows] = await pool.execute<mysql.RowDataPacket[]>('SELECT * FROM analyses WHERE id = ?', [id]);
     if (!rows.length) return null;
     return rowToAnalysis(rows[0]);
   },
   async list(): Promise<AnalysisResult[]> {
-    const pool = getPool();
+    const pool = await ensureDB();
     const [rows] = await pool.execute<mysql.RowDataPacket[]>('SELECT * FROM analyses ORDER BY created_at DESC');
     return (rows as mysql.RowDataPacket[]).map(rowToAnalysis);
   },
