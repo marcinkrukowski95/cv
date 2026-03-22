@@ -6,7 +6,7 @@ import { MatchScore } from '@/components/analysis/MatchScore';
 import { SkillsGapChart } from '@/components/analysis/SkillsGapChart';
 import { FeedbackPanel } from '@/components/analysis/FeedbackPanel';
 import { TailoredCVSection } from '@/components/analysis/TailoredCVSection';
-import { analysisStore } from '@/lib/storage/fileStore';
+import { analysisStore } from '@/lib/storage/dbStore';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -14,7 +14,7 @@ interface PageProps {
 
 export default async function AnalysisPage({ params }: PageProps) {
   const { id } = await params;
-  const analysis = analysisStore.get(id);
+  const analysis = await analysisStore.get(id);
 
   if (!analysis) notFound();
 
