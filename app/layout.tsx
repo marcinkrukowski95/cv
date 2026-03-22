@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import './globals.css';
+import { ChangelogModal } from '@/components/ui/ChangelogModal';
 
 const geist = Geist({ subsets: ['latin'] });
 
@@ -23,6 +24,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <footer className="border-t border-gray-200 bg-white/80 py-4 text-center text-xs text-gray-400">
           Stworzone przez <span className="font-medium text-gray-500">Marcin Krukowski</span>
+          &nbsp;·&nbsp;
+          <ChangelogModal />
           &nbsp;·&nbsp;
           Ostatnia aktualizacja: {updated}
         </footer>

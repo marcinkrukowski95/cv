@@ -15,25 +15,39 @@ export default function DashboardPage() {
   const router = useRouter();
   const [selectedCvId, setSelectedCvId] = useState<string | null>(null);
   const [selectedCvName, setSelectedCvName] = useState<string | null>(null);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [jobText, setJobText] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState({ step: 'starting', percent: 0 });
   const [error, setError] = useState<string | null>(null);
 
-  const canAnalyze = !!selectedCvId && !!selectedJobId && !analyzing;
+  const jobTextValid = jobText.trim().length >= 50;
+  const canAnalyze = !!selectedCvId && jobTextValid && !analyzing;
 
   const handleAnalyze = async () => {
-    if (!selectedCvId || !selectedJobId) return;
+    if (!selectedCvId || !jobTextValid) return;
 
     setAnalyzing(true);
     setError(null);
-    setProgress({ step: 'starting', percent: 5 });
+    setProgress({ step: 'preparing', percent: 3 });
 
     try {
+      // Auto-submit job text before analysis
+      const jobRes = await fetch('/api/job/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: jobText.trim() }),
+      });
+      const jobData = await jobRes.json();
+      if (!jobRes.ok) throw new Error(jobData.error || 'Błąd przetwarzania oferty');
+
+      const jobId = jobData.id;
+
+      setProgress({ step: 'starting', percent: 8 });
+
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cvId: selectedCvId, jobId: selectedJobId }),
+        body: JSON.stringify({ cvId: selectedCvId, jobId }),
       });
 
       if (!res.body) throw new Error('No response stream');
@@ -145,22 +159,18 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <div className={cn(
                 'h-7 w-7 rounded-full flex items-center justify-center text-sm font-bold',
-                selectedJobId ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                jobTextValid ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
               )}>
-                {selectedJobId ? <CheckCircle className="h-4 w-4" /> : '2'}
+                {jobTextValid ? <CheckCircle className="h-4 w-4" /> : '2'}
               </div>
               <CardTitle>Oferta pracy</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <JobInputForm
-              onSelect={setSelectedJobId}
-              selectedJobId={selectedJobId || undefined}
-            />
+            <JobInputForm text={jobText} onChange={setJobText} />
           </CardContent>
         </Card>
 
-        {/* Analyze button */}
         <Button
           onClick={handleAnalyze}
           disabled={!canAnalyze}

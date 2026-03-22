@@ -22,7 +22,6 @@ interface TailorResult {
 }
 
 function parseJSONSafe<T>(text: string): T {
-  // Strip markdown code blocks if present
   const cleaned = text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
   try {
     return JSON.parse(cleaned) as T;
@@ -35,39 +34,51 @@ function parseJSONSafe<T>(text: string): T {
 }
 
 export async function parseJobListing(rawText: string, onProgress?: ProgressCallback): Promise<ParsedJobData> {
-  onProgress?.('parsing_job', 10);
+  onProgress?.('parsing_job', 12);
   const client = getAnthropicClient();
 
-  const message = await client.messages.create({
+  let fullText = '';
+  const stream = await client.messages.stream({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
-    messages: [{ role: 'user', content: buildParseJobPrompt(rawText) }],
     system: PARSE_JOB_SYSTEM,
+    messages: [{ role: 'user', content: buildParseJobPrompt(rawText) }],
   });
 
-  const content = message.content[0];
-  if (content.type !== 'text') throw new Error('Unexpected response type from Claude');
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+      fullText += chunk.delta.text;
+      const pct = 12 + Math.min(13, Math.round((fullText.length / 800) * 13));
+      onProgress?.('parsing_job', pct);
+    }
+  }
 
   onProgress?.('parsing_job', 25);
-  return parseJSONSafe<ParsedJobData>(content.text);
+  return parseJSONSafe<ParsedJobData>(fullText);
 }
 
 export async function scoreCV(cvText: string, parsedJob: ParsedJobData, onProgress?: ProgressCallback): Promise<GapAnalysis> {
-  onProgress?.('scoring', 30);
+  onProgress?.('scoring', 28);
   const client = getAnthropicClient();
 
-  const message = await client.messages.create({
+  let fullText = '';
+  const stream = await client.messages.stream({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 2048,
-    messages: [{ role: 'user', content: buildScorePrompt(cvText, JSON.stringify(parsedJob, null, 2)) }],
     system: SCORE_SYSTEM,
+    messages: [{ role: 'user', content: buildScorePrompt(cvText, JSON.stringify(parsedJob, null, 2)) }],
   });
 
-  const content = message.content[0];
-  if (content.type !== 'text') throw new Error('Unexpected response type from Claude');
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+      fullText += chunk.delta.text;
+      const pct = 28 + Math.min(22, Math.round((fullText.length / 1600) * 22));
+      onProgress?.('scoring', pct);
+    }
+  }
 
   onProgress?.('scoring', 50);
-  return parseJSONSafe<GapAnalysis>(content.text);
+  return parseJSONSafe<GapAnalysis>(fullText);
 }
 
 export async function tailorCV(
@@ -76,12 +87,14 @@ export async function tailorCV(
   gapAnalysis: GapAnalysis,
   onProgress?: ProgressCallback,
 ): Promise<TailorResult> {
-  onProgress?.('tailoring', 55);
+  onProgress?.('tailoring', 53);
   const client = getAnthropicClient();
 
-  const message = await client.messages.create({
+  let fullText = '';
+  const stream = await client.messages.stream({
     model: 'claude-opus-4-6',
     max_tokens: 16000,
+    system: TAILOR_SYSTEM,
     messages: [{
       role: 'user',
       content: buildTailorPrompt(
@@ -90,14 +103,19 @@ export async function tailorCV(
         JSON.stringify(gapAnalysis, null, 2),
       ),
     }],
-    system: TAILOR_SYSTEM,
   });
 
-  const content = message.content[0];
-  if (content.type !== 'text') throw new Error('Unexpected response type from Claude');
+  const expectedChars = 10000; // rough estimate for Opus response
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+      fullText += chunk.delta.text;
+      const pct = 53 + Math.min(37, Math.round((fullText.length / expectedChars) * 37));
+      onProgress?.('tailoring', pct);
+    }
+  }
 
   onProgress?.('tailoring', 90);
-  return parseJSONSafe<TailorResult>(content.text);
+  return parseJSONSafe<TailorResult>(fullText);
 }
 
 export async function runFullAnalysis(
@@ -105,7 +123,6 @@ export async function runFullAnalysis(
   jobText: string,
   onProgress?: ProgressCallback,
 ) {
-  // Cap inputs to avoid token overflow (CV ~8k chars, job ~6k chars)
   const cvTruncated = cvText.length > 8000 ? cvText.slice(0, 8000) + '\n[...tekst skrócony...]' : cvText;
   const jobTruncated = jobText.length > 6000 ? jobText.slice(0, 6000) + '\n[...tekst skrócony...]' : jobText;
 
