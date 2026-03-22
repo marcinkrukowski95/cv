@@ -24,9 +24,26 @@ Job listing text:
 ${rawJobText}`;
 }
 
-export const SCORE_SYSTEM = `You are an ATS (Applicant Tracking System) expert and CV analyst.
+export const SCORE_SYSTEM = `You are an expert recruiter and CV optimization specialist.
 Score CV-to-job matches objectively. Return ONLY valid JSON, no markdown, no explanation.
-IMPORTANT: All text values in the JSON (skill names, descriptions, suggestions) must be written in Polish.`;
+
+Important rules:
+- Use only evidence found in the provided CV and job ad.
+- Do not invent facts.
+- If evidence is weak or indirect, state that clearly.
+- Be strict but fair.
+- Missing must-have requirements should materially lower the score.
+- Suggestions must remain truthful and realistic.
+
+Evaluation priorities:
+1. Requirement coverage
+2. Proof of experience
+3. Seniority relevance
+4. Responsibility overlap
+5. ATS keyword alignment
+6. Strength of positioning
+
+IMPORTANT: All text values in the JSON (skill names, descriptions, suggestions) must be written in Polish, unless both the CV and job ad are fully in English.`;
 
 export function buildScorePrompt(cvText: string, parsedJobJSON: string): string {
   return `Compare this CV against the job requirements and return ONLY valid JSON:
@@ -50,11 +67,11 @@ export function buildScorePrompt(cvText: string, parsedJobJSON: string): string 
   ]
 }
 
-Scoring rubric:
-- technicalSkills: % of required technical skills present and adequately demonstrated
-- experience: relevance and seniority of work experience vs requirements (if no requirement stated, score 70)
+Scoring rubric (be strict — missing must-have requirements materially lower the score):
+- technicalSkills: % of required technical skills present AND adequately demonstrated with evidence
+- experience: relevance and seniority of work experience vs requirements; weak or indirect evidence counts less (if no requirement stated, score 70)
 - education: education match (if no education requirement stated, score 85)
-- keywords: presence of important domain keywords from the job listing in the CV
+- keywords: presence and quality of ATS-relevant domain keywords from the job listing in the CV
 
 CV:
 ${cvText}
@@ -63,10 +80,27 @@ Job requirements (pre-parsed):
 ${parsedJobJSON}`;
 }
 
-export const TAILOR_SYSTEM = `You are an expert CV writer specializing in tailoring CVs for specific job applications.
+export const TAILOR_SYSTEM = `You are an expert recruiter and CV optimization specialist.
 You write in the candidate's authentic voice, preserving their real experience while optimizing presentation.
 Return ONLY valid JSON, no markdown, no explanation.
-IMPORTANT: All text values in the JSON (summaries, feedback, suggestions, examples, descriptions) must be written in Polish.`;
+
+Important rules:
+- Use only evidence found in the provided CV and job ad. Do not invent facts.
+- If evidence is weak or indirect, state that clearly.
+- Be strict but fair. Focus on actionable improvements.
+- Never suggest false claims or fake metrics.
+- Suggestions must remain truthful and realistic.
+
+When suggesting CV improvements, focus on:
+- improving clarity
+- improving relevance
+- improving ordering
+- improving wording
+- improving achievement framing
+- improving keyword alignment
+- improving evidence
+
+IMPORTANT: All text values in the JSON (summaries, feedback, suggestions, examples, descriptions) must be written in Polish, unless both the CV and job ad are fully in English.`;
 
 export function buildTailorPrompt(cvText: string, parsedJobJSON: string, gapAnalysisJSON: string): string {
   return `Based on the gap analysis below, provide structured feedback and a tailored CV.
@@ -115,13 +149,14 @@ Return ONLY valid JSON with this structure:
 }
 
 CRITICAL RULES:
-- NEVER fabricate experience, skills, or achievements not in the original CV
+- NEVER fabricate experience, skills, achievements, or metrics not in the original CV
 - DO reorder bullet points to lead with most relevant achievements
 - DO rephrase using terminology from the job listing where truthful and accurate
 - DO strengthen summary/profile to directly address the role
-- DO add skills the candidate demonstrably has but hasn't listed (infer from experience)
+- DO add skills the candidate demonstrably has but hasn't listed (only if clearly inferable from experience)
 - For missing required skills: note as "genuine gap - cannot add" in changeLog, do NOT add to tailoredText
 - topPriorities should have 3-5 items, sectionFeedback should cover all main CV sections
+- If evidence for a claim is weak or indirect, mark it clearly in the suggestion
 
 Original CV:
 ${cvText}
